@@ -11,12 +11,15 @@ const icons = {
   chevronRight: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`,
   settings: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
   inbox: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`,
+  activity: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
 }
+
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
-let stats = { count: 0, memorySaved: 0 }
+let stats = { current: 0, total: 0, memorySaved: 0, currentMemorySaved: 0 }
 let suspendedTabs = {}
+
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -168,18 +171,19 @@ function render() {
       <div class="stat-card suspended">
         <div class="stat-top">
           <span class="stat-icon">${icons.moon}</span>
-          <span class="stat-label">Suspended</span>
+          <span class="stat-label">Resting Now</span>
         </div>
-        <span class="stat-value">${stats.count}<span class="stat-unit"> tab${stats.count !== 1 ? 's' : ''}</span></span>
+        <span class="stat-value">${stats.current}<span class="stat-unit"> tab${stats.current !== 1 ? 's' : ''}</span></span>
       </div>
       <div class="stat-card memory">
         <div class="stat-top">
-          <span class="stat-icon">${icons.cpu}</span>
-          <span class="stat-label">Memory Saved</span>
+          <span class="stat-icon">${icons.activity}</span>
+          <span class="stat-label">Total Saved</span>
         </div>
-        <span class="stat-value">~${mem.value}<span class="stat-unit">${mem.unit}</span></span>
+        <span class="stat-value">${formatMemory(stats.memorySaved).value}<span class="stat-unit">${formatMemory(stats.memorySaved).unit}</span></span>
       </div>
     </div>
+
 
     <!-- Quick Actions -->
     <div class="section fade-in fade-in-d2">
@@ -227,7 +231,16 @@ function render() {
   document.getElementById('btn-restore-all')?.addEventListener('click', restoreAll)
 }
 
+// ─── Events ───────────────────────────────────────────────────────────
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === 'TAB_SUSPENDED') {
+    refreshData()
+  }
+})
+
 // ─── Init ────────────────────────────────────────────────────────────────────
+
 
 async function refreshData() {
   await Promise.all([fetchStats(), fetchSuspendedList()])

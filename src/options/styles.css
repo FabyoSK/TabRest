@@ -143,11 +143,160 @@ body {
   letter-spacing: -0.01em;
 }
 
+.section-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ctp-mauve);
+  background: rgba(203, 166, 247, 0.1);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+}
+
+.dashboard-section {
+  margin-bottom: 32px;
+  animation: fadeIn 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.metric-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all var(--transition);
+}
+
+.metric-card:hover {
+  border-color: var(--ctp-surface1);
+  background: rgba(69, 71, 90, 0.2);
+}
+
+.metric-card.highlight {
+  border-color: rgba(203, 166, 247, 0.3);
+  background: linear-gradient(135deg, rgba(203, 166, 247, 0.05) 0%, transparent 100%);
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.metric-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: -0.02em;
+}
+
+.highlight .metric-value {
+  color: var(--ctp-mauve);
+}
+
+.metric-desc {
+  font-size: 11px;
+  color: var(--ctp-overlay1);
+}
+
+/* ─── Dashboard History ─────────────────────────────────────────────────── */
+
+.dashboard-history {
+  margin-top: 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.history-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  padding: 12px 16px;
+  background: rgba(69, 71, 90, 0.2);
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item.new {
+  background: rgba(203, 166, 247, 0.03);
+}
+
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.history-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-meta {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.history-time {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ctp-overlay1);
+  margin-left: 12px;
+  white-space: nowrap;
+}
+
+.history-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
 .section-desc {
+
   font-size: 12px;
   color: var(--muted-foreground);
   margin-left: auto;
 }
+
 
 /* shadcn Card */
 .settings-card {
@@ -166,7 +315,9 @@ body {
   padding: 14px 20px;
   border-bottom: 1px solid var(--border);
   transition: background var(--transition);
+  gap: 16px;
 }
+
 
 .setting-row:last-child {
   border-bottom: none;
@@ -189,6 +340,13 @@ body {
   font-weight: 500;
   color: var(--foreground);
 }
+
+.setting-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 
 .setting-desc {
   font-size: 12px;
@@ -362,7 +520,7 @@ body {
 }
 
 /* shadcn Button - default variant */
-.btn-add {
+.btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -380,18 +538,48 @@ body {
   white-space: nowrap;
 }
 
-.btn-add:hover {
+.btn-primary:hover {
   background: var(--ctp-lavender);
 }
 
-.btn-add:focus-visible {
+.btn-primary:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
-.btn-add:active {
+.btn-primary:active {
   transform: scale(0.97);
 }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted-foreground);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.btn-ghost:hover {
+  background: var(--accent);
+  color: var(--foreground);
+  border-color: var(--ctp-surface2);
+}
+
+.btn-ghost:active {
+  transform: scale(0.97);
+}
+
+
 
 /* shadcn Badge variant */
 .whitelist-tags {
@@ -449,32 +637,37 @@ body {
 
 .toast {
   position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%) translateY(60px);
+  bottom: 32px;
+  right: 32px;
+  transform: translateY(100px);
   background: var(--card);
   color: var(--foreground);
   border: 1px solid var(--border);
-  padding: 10px 20px;
+  padding: 12px 20px;
   border-radius: var(--radius);
   font-size: 13px;
   font-weight: 500;
   opacity: 0;
-  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 400ms cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
   white-space: nowrap;
   z-index: 100;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .toast.visible {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
 }
 
 .toast.success {
-  border-color: rgba(166, 227, 161, 0.2);
+  border-color: rgba(166, 227, 161, 0.3);
+  background: linear-gradient(to right, rgba(166, 227, 161, 0.05), var(--card));
 }
+
 
 /* ─── Animations ────────────────────────────────────────────────────────── */
 
