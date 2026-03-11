@@ -2,7 +2,7 @@
   "private": true,
   "name": "TabRest",
   "description": "Automatically suspend inactive tabs to save memory and keep your browser fast.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "type": "module",
   "author": {
