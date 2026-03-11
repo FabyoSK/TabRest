@@ -1,0 +1,78 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bump version
+        id: bump
+        run: |
+          # Bumps the patch version without creating a git tag instantly
+          npm version patch --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Commit the bumped version back to the repository
+          git add package.json package-lock.json
+          git commit -m "chore: release v$VERSION"
+          git push
+
+      - name: Build extension
+        run: npm run build:chrome
+
+      - name: Get metadata
+        id: meta
+        run: |
+          echo "tag=v${{ steps.bump.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y-%m-%d %H:%M')" >> $GITHUB_OUTPUT
+
+      - name: Archive build
+        run: |
+          cd dist/chrome
+          zip -r ../../TabRest-v${{ steps.bump.outputs.version }}-chrome.zip .
+          cd ../..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Release ${{ steps.bump.outputs.version }}
+          body: |
+            Automated release from main branch.
+            Build Date: ${{ steps.meta.outputs.date }}
+            Commit: ${{ github.sha }}
+          files: |
+            TabRest-v${{ steps.bump.outputs.version }}-chrome.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
