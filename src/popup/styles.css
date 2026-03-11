@@ -106,75 +106,95 @@ body {
 
 /* ─── Stats ─────────────────────────────────────────────────────────────── */
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 12px 16px;
-}
+/* ─── Tab Limit Progress ───────────────────────────────────────────────── */
 
-.stat-card {
+.limit-container {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 14px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  margin: 12px 0 8px;
   transition: border-color var(--transition);
 }
 
-.stat-card:hover {
+.limit-container:hover {
   border-color: var(--ctp-surface1);
 }
 
-.stat-top {
+.limit-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
 }
 
-.stat-icon {
+.limit-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--muted-foreground);
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.stat-icon svg {
+.limit-label svg {
   width: 14px;
   height: 14px;
 }
 
-.stat-label {
-  font-size: 11px;
-  color: var(--muted-foreground);
-  font-weight: 500;
-  letter-spacing: 0.01em;
+.limit-status {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
 }
 
-.stat-value {
-  font-size: 26px;
+.limit-current {
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: -0.5px;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
 }
 
-.stat-card.suspended .stat-value {
-  color: var(--ctp-mauve);
-}
-
-.stat-card.memory .stat-value {
-  color: var(--ctp-green);
-}
-
-.stat-unit {
-  font-size: 13px;
+.limit-total {
+  font-size: 12px;
+  color: var(--ctp-overlay1);
   font-weight: 500;
-  opacity: 0.7;
-  margin-left: 1px;
 }
+
+.progress-track {
+  height: 6px;
+  background: var(--ctp-surface0);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--ctp-mauve);
+  border-radius: 999px;
+  transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1), background var(--transition);
+}
+
+.progress-fill.warning {
+  background: var(--ctp-red);
+}
+
+.progress-desc {
+  font-size: 11px;
+  color: var(--ctp-overlay1);
+  line-height: 1.3;
+}
+
+.limit-help {
+  font-size: 11px;
+  color: var(--ctp-overlay0);
+  font-style: italic;
+  padding-top: 4px;
+}
+
 
 /* ─── Sections ──────────────────────────────────────────────────────────── */
 

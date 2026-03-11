@@ -28,7 +28,8 @@
     "storage",
     "contextMenus",
     "alarms",
-    "activeTab"
+    "activeTab",
+    "theme"
   ],
   "content_scripts": [
     {

@@ -12,12 +12,21 @@ const icons = {
   settings: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
   inbox: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`,
   activity: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  layers: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
 }
+
 
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
-let stats = { current: 0, total: 0, memorySaved: 0, currentMemorySaved: 0 }
+let stats = { 
+  current: 0, 
+  total: 0, 
+  memorySaved: 0, 
+  openTabsCount: 0, 
+  maxOpenTabs: 0 
+}
+
 let suspendedTabs = {}
 
 
@@ -58,11 +67,12 @@ function showToast(message) {
 async function fetchStats() {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ type: 'GET_STATS' }, (response) => {
-      if (response) stats = response
+      if (response) stats = { ...stats, ...response }
       resolve()
     })
   })
 }
+
 
 async function fetchSuspendedList() {
   return new Promise((resolve) => {
@@ -166,23 +176,38 @@ function render() {
 
     <div class="divider"></div>
 
-    <!-- Stats -->
-    <div class="stats-grid fade-in fade-in-d1">
-      <div class="stat-card suspended">
-        <div class="stat-top">
-          <span class="stat-icon">${icons.moon}</span>
-          <span class="stat-label">Resting Now</span>
+    <!-- Tab Limit Progress -->
+    <div class="section fade-in fade-in-d1">
+      <div class="limit-container">
+        <div class="limit-info">
+          <div class="limit-label">
+            ${icons.layers}
+            <span>Open Tabs</span>
+          </div>
+          <div class="limit-status">
+            <span class="limit-current">${stats.openTabsCount || 0}</span>
+            <span class="limit-total">${(stats.maxOpenTabs || 0) > 0 ? `/ ${stats.maxOpenTabs}` : ''}</span>
+          </div>
+
         </div>
-        <span class="stat-value">${stats.current}<span class="stat-unit"> tab${stats.current !== 1 ? 's' : ''}</span></span>
-      </div>
-      <div class="stat-card memory">
-        <div class="stat-top">
-          <span class="stat-icon">${icons.activity}</span>
-          <span class="stat-label">Total Saved</span>
-        </div>
-        <span class="stat-value">${formatMemory(stats.memorySaved).value}<span class="stat-unit">${formatMemory(stats.memorySaved).unit}</span></span>
+        ${stats.maxOpenTabs > 0 ? `
+          <div class="progress-track">
+            <div class="progress-fill ${(stats.openTabsCount || 0) / stats.maxOpenTabs > 0.85 ? 'warning' : ''}" 
+                 style="width: ${Math.min(100, ((stats.openTabsCount || 0) / stats.maxOpenTabs) * 100)}%">
+            </div>
+          </div>
+
+          <div class="progress-desc">
+            ${stats.maxOpenTabs - stats.openTabsCount > 0 
+              ? `${stats.maxOpenTabs - stats.openTabsCount} more till auto-suspension`
+              : 'Limit reached! Oldest tabs will rest next.'}
+          </div>
+        ` : `
+          <div class="limit-help">No limit set in settings</div>
+        `}
       </div>
     </div>
+
 
 
     <!-- Quick Actions -->

@@ -23,19 +23,32 @@ const DEFAULT_SETTINGS = {
   restoreScroll: true,
   maxSuspended: 100,
   backgroundOnly: true,
+  maxOpenTabs: 20,
   showToasts: true,
+  trackDetailedMetrics: false,
 }
+
+
 
 
 
 let settings = { ...DEFAULT_SETTINGS }
 let whitelist = []
+let isCustomMode = false
 let metrics = {
   currentSuspended: 0,
   totalSuspended: 0,
   memorySaved: 0,
-  history: []
+  history: [],
+  detailed: {
+    today: 0,
+    week: 0,
+    month: 0,
+    session: 0
+  },
+  trackEnabled: false
 }
+
 
 
 
@@ -51,19 +64,39 @@ function showToast(message, isSuccess = false) {
   setTimeout(() => toast.classList.remove('visible'), 2000)
 }
 
+function formatMemory(mb) {
+  if (mb >= 1024) return { value: (mb / 1024).toFixed(1), unit: 'GB' }
+  return { value: String(mb), unit: 'MB' }
+}
+
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
 async function loadSettings() {
-  const result = await chrome.storage.local.get(['settings', 'whitelist', 'totalSuspended', 'suspendedTabs', 'suspensionHistory'])
-  settings = { ...DEFAULT_SETTINGS, ...(result.settings || {}) }
-  whitelist = result.whitelist || []
-  
-  const suspendedTabs = result.suspendedTabs || {}
-  metrics.currentSuspended = Object.keys(suspendedTabs).length
-  metrics.totalSuspended = result.totalSuspended || 0
-  metrics.memorySaved = metrics.totalSuspended * 80
-  metrics.history = result.suspensionHistory || []
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'GET_STATS' }, (res) => {
+      if (res) {
+        metrics.currentSuspended = res.current
+        metrics.totalSuspended = res.total
+        metrics.memorySaved = res.memorySaved
+        metrics.detailed = {
+          today: res.today,
+          week: res.week,
+          month: res.month,
+          session: res.session
+        }
+        metrics.trackEnabled = res.trackDetailedMetrics
+      }
+
+      chrome.storage.local.get(['settings', 'whitelist', 'suspensionHistory'], (localRes) => {
+        settings = { ...DEFAULT_SETTINGS, ...(localRes.settings || {}) }
+        whitelist = localRes.whitelist || []
+        metrics.history = localRes.suspensionHistory || []
+        resolve()
+      })
+    })
+  })
 }
+
 
 
 
@@ -78,9 +111,12 @@ async function saveWhitelist() {
 function handleTimeoutChange(e) {
   const val = e.target.value
   if (val !== 'custom') {
+    isCustomMode = false
     settings.idleTimeout = parseInt(val, 10)
     saveSettings()
     showToast('Settings saved', true)
+  } else {
+    isCustomMode = true
   }
   render()
 }
@@ -120,6 +156,7 @@ function render() {
   if (!root) return
 
   const isPreset = [5, 10, 15, 30, 60].includes(settings.idleTimeout)
+  const showCustom = isCustomMode || !isPreset
 
   root.innerHTML = `
     <div class="options-container">
@@ -138,7 +175,7 @@ function render() {
         </div>
         <div class="metrics-grid">
           <div class="metric-card highlight">
-            <span class="metric-label">Memory Saved</span>
+            <span class="metric-label">Memory Saved (Total)</span>
             <span class="metric-value">${(metrics.memorySaved / 1024).toFixed(2)} GB</span>
             <span class="metric-desc">Approximate RAM freed</span>
           </div>
@@ -148,11 +185,73 @@ function render() {
             <span class="metric-desc">Tabs suspended now</span>
           </div>
           <div class="metric-card">
-            <span class="metric-label">Total Restored</span>
+            <span class="metric-label">Total Suspensions</span>
             <span class="metric-value">${metrics.totalSuspended}</span>
-            <span class="metric-desc">All-time suspensions</span>
+            <span class="metric-desc">All-time count</span>
           </div>
         </div>
+
+        ${metrics.trackEnabled ? `
+        <div class="detailed-metrics-grid">
+          <div class="detailed-card">
+            <span class="det-label">Today</span>
+            <div class="det-group">
+              <div class="det-item">
+                <span class="det-value">${metrics.detailed.today}</span>
+                <span class="det-unit">tabs</span>
+              </div>
+              <div class="det-item">
+                <span class="det-value">${formatMemory(metrics.detailed.today * 80).value}</span>
+                <span class="det-unit">${formatMemory(metrics.detailed.today * 80).unit}</span>
+              </div>
+            </div>
+          </div>
+          <div class="detailed-card">
+            <span class="det-label">This Week</span>
+            <div class="det-group">
+              <div class="det-item">
+                <span class="det-value">${metrics.detailed.week}</span>
+                <span class="det-unit">tabs</span>
+              </div>
+              <div class="det-item">
+                <span class="det-value">${formatMemory(metrics.detailed.week * 80).value}</span>
+                <span class="det-unit">${formatMemory(metrics.detailed.week * 80).unit}</span>
+              </div>
+            </div>
+          </div>
+          <div class="detailed-card">
+            <span class="det-label">Last 30 Days</span>
+            <div class="det-group">
+              <div class="det-item">
+                <span class="det-value">${metrics.detailed.month}</span>
+                <span class="det-unit">tabs</span>
+              </div>
+              <div class="det-item">
+                <span class="det-value">${formatMemory(metrics.detailed.month * 80).value}</span>
+                <span class="det-unit">${formatMemory(metrics.detailed.month * 80).unit}</span>
+              </div>
+            </div>
+          </div>
+          <div class="detailed-card session">
+            <span class="det-label">This Session</span>
+            <div class="det-group">
+              <div class="det-item">
+                <span class="det-value">${metrics.detailed.session}</span>
+                <span class="det-unit">tabs</span>
+              </div>
+              <div class="det-item">
+                <span class="det-value">${formatMemory(metrics.detailed.session * 80).value}</span>
+                <span class="det-unit">${formatMemory(metrics.detailed.session * 80).unit}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        ` : `
+        <div class="detailed-metrics-placeholder">
+          <p>Detailed tracking is disabled. Enable it in settings to see daily/weekly impact.</p>
+        </div>
+        `}
+
 
         <div class="dashboard-history">
           <div class="history-label">Recent Activity</div>
@@ -190,11 +289,11 @@ function render() {
               <option value="15" ${settings.idleTimeout === 15 ? 'selected' : ''}>15 minutes</option>
               <option value="30" ${settings.idleTimeout === 30 ? 'selected' : ''}>30 minutes</option>
               <option value="60" ${settings.idleTimeout === 60 ? 'selected' : ''}>1 hour</option>
-              <option value="custom" ${!isPreset ? 'selected' : ''}>Custom</option>
+              <option value="custom" ${showCustom ? 'selected' : ''}>Custom</option>
             </select>
           </div>
 
-          ${!isPreset ? `
+          ${showCustom ? `
             <div class="setting-row sub-row">
               <div class="setting-info">
                 <span class="setting-label">Minutes</span>
@@ -221,6 +320,17 @@ function render() {
             </div>
             <label class="toggle">
               <input type="checkbox" id="toggle-scroll" ${settings.restoreScroll ? 'checked' : ''} />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label">Detailed Impact Metrics</span>
+              <span class="setting-desc">Track daily/weekly/monthly suspension history</span>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="toggle-metrics" ${settings.trackDetailedMetrics ? 'checked' : ''} />
               <span class="toggle-track"></span>
             </label>
           </div>
@@ -319,13 +429,11 @@ function render() {
   document.getElementById('toggle-scroll')?.addEventListener('change', () => handleToggle('restoreScroll'))
   document.getElementById('toggle-background')?.addEventListener('change', () => handleToggle('backgroundOnly'))
   document.getElementById('toggle-toasts')?.addEventListener('change', () => handleToggle('showToasts'))
-  
+  document.getElementById('toggle-metrics')?.addEventListener('change', () => handleToggle('trackDetailedMetrics'))
+
+
   document.getElementById('btn-preview-toast')?.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ 
-      type: 'TAB_SUSPENDED', 
-      tabName: 'Demo Tab',
-      url: 'https://demo.example.com' 
-    }).catch(() => {})
+    showToast('This is a preview of the toast notification', true)
   })
 
   document.getElementById('input-max-suspended')?.addEventListener('change', (e) => {
