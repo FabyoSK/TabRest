@@ -1,66 +1,71 @@
-[powered-image]: https://img.shields.io/badge/Powered%20by-Extension.js-0971fe
-[powered-url]: https://extension.js.org
+# 💤 TabRest — Tab Suspension Extension
 
-![Powered by Extension.js][powered-image]
+**Automatically suspend inactive tabs** to reduce memory/CPU usage and keep your browser fast.
 
-# JavaScript Sidebar Example
+## Features
 
-> JavaScript-based extension with a sidebar panel.
+- **Auto Suspension** — Tabs inactive for a configurable time are automatically suspended via `chrome.tabs.discard()`
+- **Manual Controls** — Suspend current tab, suspend all inactive, or restore all from the popup
+- **Smart Protection** — Pinned tabs, audio-playing tabs, and whitelisted domains are never suspended
+- **Domain Whitelist** — Exclude specific sites from ever being suspended
+- **Context Menus** — Right-click any page to suspend/restore tabs
+- **Memory Stats** — See estimated memory savings at a glance
 
-Starter extension with a sidebar panel. Includes dev, build, and preview scripts.
+## Target Browsers
 
-## Installation
+| Browser        | Supported |
+|----------------|-----------|
+| Google Chrome  | ✅        |
+| Microsoft Edge | ✅        |
+| Brave Browser  | ✅        |
+| Opera          | ✅        |
+
+## Project Structure
+
+```
+src/
+├── manifest.json        # Extension manifest (MV3)
+├── background.js        # Service worker — tab tracking, alarms, suspension logic
+├── popup/
+│   ├── index.html       # Popup UI shell
+│   ├── scripts.js       # Popup logic & rendering
+│   └── styles.css       # Popup styles
+├── options/
+│   ├── index.html       # Settings page shell
+│   ├── scripts.js       # Settings logic & rendering
+│   └── styles.css       # Settings page styles
+└── images/
+    └── icon.png         # Extension icon
+```
+
+## Development
 
 ```bash
-npx extension@latest create <project-name> --template javascript
-cd <project-name>
+# Install dependencies
 npm install
-```
 
-## Commands
-
-### dev
-
-Run the extension in development mode.
-
-```bash
+# Run in development mode (opens browser with extension loaded)
 npm run dev
-```
 
-### build
-
-Build the extension for production.
-
-```bash
+# Build for production
 npm run build
 ```
 
-### preview
+## Permissions
 
-Preview the extension in the browser.
+| Permission    | Purpose                               |
+|---------------|---------------------------------------|
+| `tabs`        | Query and discard tabs                |
+| `storage`     | Persist settings, whitelist data      |
+| `contextMenus`| Right-click menu items               |
+| `alarms`      | Periodic suspension checks            |
+| `activeTab`   | Access to the currently active tab    |
 
-```bash
-npm run preview
-```
+## Settings
 
-## Browser targets
-
-Chromium is the default. You can explicitly target Chrome, Edge, or Firefox:
-
-```bash
-# Chromium (default)
-npm run dev
-
-# Chrome
-npm run dev -- --browser=chrome
-
-# Edge
-npm run dev -- --browser=edge
-
-# Firefox
-npm run dev -- --browser=firefox
-```
-
-## Learn more
-
-Learn more in the [Extension.js docs](https://extension.js.org).
+- **Idle Timeout** — 5min / 10min / 15min (default) / 30min / 1hr / Custom
+- **Suspend Pinned Tabs** — Off by default
+- **Restore Scroll Position** — On by default
+- **Max Suspended Tabs** — Default 100
+- **Background Only** — Only suspend non-foreground tabs
+- **Domain Whitelist** — Add domains that should never be suspended

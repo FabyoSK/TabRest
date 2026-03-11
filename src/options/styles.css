@@ -1,0 +1,484 @@
+/* ─── Catppuccin Mocha + shadcn-inspired Design System ──────────────────── */
+
+:root {
+  /* Catppuccin Mocha - Base tones */
+  --ctp-crust: #11111b;
+  --ctp-mantle: #181825;
+  --ctp-base: #1e1e2e;
+  --ctp-surface0: #313244;
+  --ctp-surface1: #45475a;
+  --ctp-surface2: #585b70;
+  --ctp-overlay0: #6c7086;
+  --ctp-overlay1: #7f849c;
+  --ctp-overlay2: #9399b2;
+  --ctp-subtext0: #a6adc8;
+  --ctp-subtext1: #bac2de;
+  --ctp-text: #cdd6f4;
+
+  /* Catppuccin Mocha - Accent colors */
+  --ctp-rosewater: #f5e0dc;
+  --ctp-flamingo: #f2cdcd;
+  --ctp-pink: #f5c2e7;
+  --ctp-mauve: #cba6f7;
+  --ctp-red: #f38ba8;
+  --ctp-maroon: #eba0ac;
+  --ctp-peach: #fab387;
+  --ctp-yellow: #f9e2af;
+  --ctp-green: #a6e3a1;
+  --ctp-teal: #94e2d5;
+  --ctp-sky: #89dceb;
+  --ctp-sapphire: #74c7ec;
+  --ctp-blue: #89b4fa;
+  --ctp-lavender: #b4befe;
+
+  /* Semantic mapping (shadcn-style) */
+  --background: var(--ctp-base);
+  --foreground: var(--ctp-text);
+  --card: var(--ctp-mantle);
+  --card-foreground: var(--ctp-text);
+  --primary: var(--ctp-mauve);
+  --primary-foreground: var(--ctp-crust);
+  --secondary: var(--ctp-surface0);
+  --secondary-foreground: var(--ctp-text);
+  --muted: var(--ctp-surface0);
+  --muted-foreground: var(--ctp-overlay1);
+  --accent: var(--ctp-surface1);
+  --accent-foreground: var(--ctp-text);
+  --destructive: var(--ctp-red);
+  --border: var(--ctp-surface0);
+  --input: var(--ctp-surface0);
+  --ring: var(--ctp-mauve);
+
+  --radius: 0.5rem;
+  --font: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Reset ─────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ─── Layout ────────────────────────────────────────────────────────────── */
+
+.options-container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────── */
+
+.options-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 40px;
+}
+
+.options-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+}
+
+.options-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.options-title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--foreground);
+}
+
+.options-subtitle {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+/* ─── Sections ──────────────────────────────────────────────────────────── */
+
+.settings-section {
+  margin-bottom: 28px;
+  animation: fadeIn 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.settings-section:nth-child(2) { animation-delay: 40ms; }
+.settings-section:nth-child(3) { animation-delay: 80ms; }
+.settings-section:nth-child(4) { animation-delay: 120ms; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.section-icon {
+  font-size: 15px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  letter-spacing: -0.01em;
+}
+
+.section-desc {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-left: auto;
+}
+
+/* shadcn Card */
+.settings-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* ─── Setting Row ───────────────────────────────────────────────────────── */
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+
+.setting-row:last-child {
+  border-bottom: none;
+}
+
+.setting-row:hover {
+  background: rgba(69, 71, 90, 0.3);
+}
+
+.setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.setting-desc {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+/* ─── Toggle Switch (shadcn Switch) ─────────────────────────────────────── */
+
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--ctp-overlay0);
+  border-radius: 50%;
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toggle input:checked + .toggle-track {
+  background: var(--ctp-mauve);
+  border-color: var(--ctp-mauve);
+}
+
+.toggle input:checked + .toggle-track::after {
+  left: 20px;
+  background: var(--ctp-crust);
+}
+
+.toggle input:focus-visible + .toggle-track {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* ─── Select (shadcn Select look) ───────────────────────────────────────── */
+
+.setting-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--ctp-mantle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--foreground);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 32px 6px 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+  margin-left: 16px;
+  height: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236c7086' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.setting-select:hover {
+  border-color: var(--ctp-surface1);
+}
+
+.setting-select:focus {
+  outline: none;
+  border-color: var(--ctp-mauve);
+  box-shadow: 0 0 0 3px rgba(203, 166, 247, 0.15);
+}
+
+.setting-select option {
+  background: var(--ctp-mantle);
+  color: var(--foreground);
+}
+
+/* ─── Input (shadcn Input) ──────────────────────────────────────────────── */
+
+.setting-number {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  background: var(--ctp-mantle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--foreground);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  width: 72px;
+  height: 36px;
+  text-align: center;
+  transition: all var(--transition);
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.setting-number::-webkit-inner-spin-button,
+.setting-number::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.setting-number:hover {
+  border-color: var(--ctp-surface1);
+}
+
+.setting-number:focus {
+  outline: none;
+  border-color: var(--ctp-mauve);
+  box-shadow: 0 0 0 3px rgba(203, 166, 247, 0.15);
+}
+
+/* ─── Whitelist ─────────────────────────────────────────────────────────── */
+
+.whitelist-container {
+  padding: 16px 20px;
+}
+
+.whitelist-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.whitelist-input {
+  flex: 1;
+  background: var(--ctp-mantle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--foreground);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 0 14px;
+  height: 36px;
+  transition: all var(--transition);
+}
+
+.whitelist-input::placeholder {
+  color: var(--ctp-overlay0);
+}
+
+.whitelist-input:focus {
+  outline: none;
+  border-color: var(--ctp-mauve);
+  box-shadow: 0 0 0 3px rgba(203, 166, 247, 0.15);
+}
+
+/* shadcn Button - default variant */
+.btn-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  height: 36px;
+  background: var(--ctp-mauve);
+  border: none;
+  border-radius: var(--radius);
+  color: var(--ctp-crust);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.btn-add:hover {
+  background: var(--ctp-lavender);
+}
+
+.btn-add:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.btn-add:active {
+  transform: scale(0.97);
+}
+
+/* shadcn Badge variant */
+.whitelist-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.whitelist-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 10px;
+  background: rgba(203, 166, 247, 0.1);
+  border: 1px solid rgba(203, 166, 247, 0.15);
+  border-radius: 9999px;
+  font-size: 12px;
+  color: var(--ctp-mauve);
+  font-weight: 500;
+  transition: all var(--transition);
+}
+
+.whitelist-tag:hover {
+  background: rgba(203, 166, 247, 0.15);
+}
+
+.tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--ctp-mauve);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition);
+  line-height: 1;
+}
+
+.tag-remove:hover {
+  background: rgba(243, 139, 168, 0.15);
+  color: var(--ctp-red);
+}
+
+.whitelist-empty {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  padding: 4px 0;
+}
+
+/* ─── Toast (shadcn-style) ──────────────────────────────────────────────── */
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast.success {
+  border-color: rgba(166, 227, 161, 0.2);
+}
+
+/* ─── Animations ────────────────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
