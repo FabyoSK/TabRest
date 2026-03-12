@@ -57,6 +57,7 @@ function getDomain(url) {
 function showToast(message) {
   const toast = document.getElementById('toast')
   if (!toast) return
+  toast.className = 'toast'
   toast.textContent = message
   toast.classList.add('visible')
   setTimeout(() => toast.classList.remove('visible'), 2000)
@@ -246,7 +247,6 @@ function render() {
       </button>
     </div>
 
-    <div class="toast" id="toast"></div>
   `
 
   // Bind events

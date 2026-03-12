@@ -20,6 +20,8 @@ const DEFAULT_SETTINGS = {
 
 
 let lastActiveTimes = {}
+self.lastActiveTimes = lastActiveTimes;
+self.runCheck = runCheck;
 
 async function getSettings() {
   const result = await chrome.storage.local.get('settings')
@@ -311,6 +313,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'GET_SUSPENDED_LIST') {
     chrome.storage.local.get('suspendedTabs', res => sendResponse({ tabs: res.suspendedTabs || {} }))
     return true
+  }
+  if (msg.type === 'TEST_RUN_CHECK') {
+    runCheck().then(() => sendResponse({ success: true }))
+    return true
+  }
+  if (msg.type === 'TEST_GET_ACTIVE_TIMES') {
+    sendResponse({ lastActiveTimes });
+    return true;
   }
 })
 

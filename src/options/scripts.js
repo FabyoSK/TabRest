@@ -411,7 +411,6 @@ function render() {
         </div>
       </div>
     </div>
-    <div class="toast" id="toast"></div>
   `
 
   // ─── Event Listeners ───────────────────────────────────────────────────

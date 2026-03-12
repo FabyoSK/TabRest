@@ -33,6 +33,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build extension
+        run: npm run build:chrome
+
+      - name: Run tests
+        run: npm run test
+
       - name: Bump version
         id: bump
         run: |
