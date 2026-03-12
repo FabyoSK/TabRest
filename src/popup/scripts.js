@@ -21,6 +21,7 @@ const MESSAGE_TYPES = {
   SUSPEND_ALL: 'SUSPEND_ALL',
   SUSPEND_ALL_EXCEPT_CURRENT: 'SUSPEND_ALL_EXCEPT_CURRENT',
   TAB_SUSPENDED: 'TAB_SUSPENDED',
+  TAB_INDICATOR_UPDATED: 'TAB_INDICATOR_UPDATED',
 }
 
 const TOAST_DURATION = 2000
@@ -312,7 +313,7 @@ function bindEventListeners() {
 
 function setupMessageListeners() {
   chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === MESSAGE_TYPES.TAB_SUSPENDED) {
+    if (message.type === MESSAGE_TYPES.TAB_SUSPENDED || message.type === MESSAGE_TYPES.TAB_INDICATOR_UPDATED) {
       refreshData()
     }
   })

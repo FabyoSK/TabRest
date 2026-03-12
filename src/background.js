@@ -14,6 +14,7 @@ const CONFIG = {
     showToasts: true,
     maxOpenTabs: 20,
     trackDetailedMetrics: false,
+    visualIndicator: '[Zzz] ',
   },
   METRICS: {
     MEMORY_SAVED_PER_TAB_MB: 80,
@@ -181,14 +182,17 @@ async function updateBadge() {
 
 async function addVisualIndicator(tabId) {
   try {
+    const settings = await storage.getSettings()
+    const indicator = settings.visualIndicator || CONFIG.VISUAL_INDICATOR
+
     await chrome.scripting.executeScript({
       target: { tabId },
-      func: (indicator) => {
-        if (!document.title.startsWith(indicator)) {
-          document.title = indicator + document.title
+      func: (ind) => {
+        if (!document.title.startsWith(ind)) {
+          document.title = ind + document.title
         }
       },
-      args: [CONFIG.VISUAL_INDICATOR]
+      args: [indicator]
     })
   } catch (e) {
     // Ignore errors for system pages or restricted pages
@@ -478,8 +482,69 @@ function setupEventListeners() {
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local' && changes.settings) {
       enforceTabLimit()
+
+      const oldIndicator = changes.settings.oldValue?.visualIndicator
+      const newIndicator = changes.settings.newValue?.visualIndicator
+
+      if (oldIndicator !== undefined && newIndicator !== undefined && oldIndicator !== newIndicator) {
+        updateAllSuspendedTitles(oldIndicator, newIndicator)
+      }
     }
   })
+}
+
+async function updateAllSuspendedTitles(oldIndicator, newIndicator) {
+  console.log(`[TabRest] Updating indicators from "${oldIndicator}" to "${newIndicator}"`)
+
+  // 1. Update storage for suspended tabs
+  const suspended = await storage.getSuspendedTabs()
+  let suspendedChanged = false
+  for (const tabId in suspended) {
+    if (suspended[tabId].title?.startsWith(oldIndicator)) {
+      suspended[tabId].title = newIndicator + suspended[tabId].title.substring(oldIndicator.length)
+      suspendedChanged = true
+    }
+  }
+  if (suspendedChanged) {
+    await chrome.storage.local.set({ suspendedTabs: suspended })
+  }
+
+  // 2. Update storage for history
+  const historyResult = await chrome.storage.local.get('suspensionHistory')
+  const history = historyResult.suspensionHistory || []
+  let historyChanged = false
+  for (const item of history) {
+    if (item.title?.startsWith(oldIndicator)) {
+      item.title = newIndicator + item.title.substring(oldIndicator.length)
+      historyChanged = true
+    }
+  }
+  if (historyChanged) {
+    await chrome.storage.local.set({ suspensionHistory: history })
+  }
+
+  // 3. Update live tabs (if any have the indicator)
+  const tabs = await chrome.tabs.query({ discarded: false })
+  for (const tab of tabs) {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: (oldInd, newInd) => {
+          if (document.title.startsWith(oldInd)) {
+            document.title = newInd + document.title.substring(oldInd.length)
+          }
+        },
+        args: [oldIndicator, newIndicator]
+      })
+    } catch (e) {
+      // Ignore system pages
+    }
+  }
+
+  // Notify popup to refresh if open
+  try {
+    chrome.runtime.sendMessage({ type: 'TAB_INDICATOR_UPDATED' })
+  } catch (e) { }
 }
 
 self.lastActiveTimes = lastActiveTimes

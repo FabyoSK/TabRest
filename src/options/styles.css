@@ -583,6 +583,31 @@ body {
   box-shadow: 0 0 0 3px rgba(203, 166, 247, 0.15);
 }
 
+.setting-input {
+  background: var(--ctp-mantle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--foreground);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 0 12px;
+  width: 120px;
+  height: 36px;
+  transition: all var(--transition);
+  margin-left: 16px;
+  text-align: right;
+}
+
+.setting-input:hover {
+  border-color: var(--ctp-surface1);
+}
+
+.setting-input:focus {
+  outline: none;
+  border-color: var(--ctp-mauve);
+  box-shadow: 0 0 0 3px rgba(203, 166, 247, 0.15);
+}
+
 /* shadcn Button - default variant */
 .btn-primary {
   display: inline-flex;

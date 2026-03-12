@@ -35,6 +35,7 @@ export const DEFAULT_SETTINGS = {
   showToasts: true,
   maxOpenTabs: 20,
   trackDetailedMetrics: false,
+  visualIndicator: '[Zzz] ',
 }
 
 export const TIMEOUT_PRESETS = [5, 10, 15, 30, 60]

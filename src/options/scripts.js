@@ -32,6 +32,7 @@ const DEFAULT_SETTINGS = {
   maxOpenTabs: 20,
   showToasts: true,
   trackDetailedMetrics: false,
+  visualIndicator: '[Zzz] ',
 }
 
 const TIMEOUT_PRESETS = [5, 10, 15, 30, 60]
@@ -394,6 +395,13 @@ function renderGeneralSettings() {
           </div>
           ${renderToggle('metrics', 'trackDetailedMetrics')}
         </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Suspension Indicator</span>
+            <span class="setting-desc">Text prefix added to suspended tab titles</span>
+          </div>
+          <input type="text" class="setting-input" id="input-visual-indicator" value="${state.settings.visualIndicator}" placeholder="[Zzz] " />
+        </div>
       </div>
     </div>
   `
@@ -514,6 +522,13 @@ function bindEventListeners() {
   document.getElementById('toggle-background')?.addEventListener('change', () => handleToggle('backgroundOnly'))
   document.getElementById('toggle-toasts')?.addEventListener('change', () => handleToggle('showToasts'))
   document.getElementById('toggle-metrics')?.addEventListener('change', () => handleToggle('trackDetailedMetrics'))
+
+  document.getElementById('input-visual-indicator')?.addEventListener('change', (e) => {
+    const value = e.target.value
+    state.settings.visualIndicator = value
+    saveSettings()
+    showToast('Settings saved', true)
+  })
 
   document.getElementById('btn-preview-toast')?.addEventListener('click', () => {
     showToast('This is a preview of the toast notification', true)
