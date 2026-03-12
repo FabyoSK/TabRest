@@ -7,7 +7,7 @@ export const test = base.extend<{
   extensionId: string;
 }>({
   context: async ({ }, use) => {
-    const pathToExtension = path.join(process.cwd(), 'dist/chrome');
+    const pathToExtension = path.join(process.cwd(), 'dist/chromium');
     if (!fs.existsSync(pathToExtension)) {
       throw new Error(`Extension "dist" folder not found at ${pathToExtension}. Make sure to build it first.`);
     }

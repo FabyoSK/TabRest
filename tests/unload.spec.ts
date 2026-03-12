@@ -46,6 +46,9 @@ test.describe('Tab Unload / Auto-suspend Feature', () => {
           discardCalled = true;
           return { id, discarded: true } as any;
        };
+       workerGlobal.chrome.scripting = {
+          executeScript: async () => {}
+       };
 
        if (workerGlobal.runCheck) {
           await workerGlobal.runCheck();

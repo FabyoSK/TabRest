@@ -19,7 +19,7 @@ const MESSAGE_TYPES = {
   GET_SUSPENDED_LIST: 'GET_SUSPENDED_LIST',
   SUSPEND_CURRENT: 'SUSPEND_CURRENT',
   SUSPEND_ALL: 'SUSPEND_ALL',
-  RESTORE_ALL: 'RESTORE_ALL',
+  SUSPEND_ALL_EXCEPT_CURRENT: 'SUSPEND_ALL_EXCEPT_CURRENT',
   TAB_SUSPENDED: 'TAB_SUSPENDED',
 }
 
@@ -126,13 +126,14 @@ async function suspendAll() {
   refreshData()
 }
 
-async function restoreAll() {
-  const response = await sendMessage(MESSAGE_TYPES.RESTORE_ALL)
+async function suspendAllExceptCurrent() {
+  const response = await sendMessage(MESSAGE_TYPES.SUSPEND_ALL_EXCEPT_CURRENT)
   const count = response?.count || 0
   const label = count !== 1 ? 'tabs' : 'tab'
-  showToast(`${count} ${label} restored`)
+  showToast(`${count} ${label} suspended`)
   refreshData()
 }
+
 
 function getFaviconUrl(url) {
   try {
@@ -235,9 +236,9 @@ function renderQuickActions() {
     <div class="section fade-in fade-in-d2">
       <div class="section-label">Quick Actions</div>
       <div class="actions-list">
-        <button class="action-row primary" id="btn-suspend-all">
-          <span class="action-row-icon">${ICONS.zap}</span>
-          <span class="action-row-label">Suspend All Inactive</span>
+        <button class="action-row primary" id="btn-suspend-all-except-current">
+          <span class="action-row-icon">${ICONS.moon}</span>
+          <span class="action-row-label">Suspend All Except Current</span>
           <span class="action-row-arrow">${ICONS.chevronRight}</span>
         </button>
         <button class="action-row" id="btn-suspend-current">
@@ -245,9 +246,9 @@ function renderQuickActions() {
           <span class="action-row-label">Suspend Current Tab</span>
           <span class="action-row-arrow">${ICONS.chevronRight}</span>
         </button>
-        <button class="action-row" id="btn-restore-all">
-          <span class="action-row-icon">${ICONS.rotateCcw}</span>
-          <span class="action-row-label">Restore All Tabs</span>
+        <button class="action-row" id="btn-suspend-all">
+          <span class="action-row-icon">${ICONS.zap}</span>
+          <span class="action-row-label">Suspend All Inactive</span>
           <span class="action-row-arrow">${ICONS.chevronRight}</span>
         </button>
       </div>
@@ -306,7 +307,7 @@ function bindEventListeners() {
   })
   document.getElementById('btn-suspend-current')?.addEventListener('click', suspendCurrent)
   document.getElementById('btn-suspend-all')?.addEventListener('click', suspendAll)
-  document.getElementById('btn-restore-all')?.addEventListener('click', restoreAll)
+  document.getElementById('btn-suspend-all-except-current')?.addEventListener('click', suspendAllExceptCurrent)
 }
 
 function setupMessageListeners() {

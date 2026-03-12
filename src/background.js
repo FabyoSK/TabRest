@@ -23,6 +23,7 @@ const CONFIG = {
   },
   HISTORY_LIMIT: 10,
   BADGE_COLOR: '#cba6f7',
+  VISUAL_INDICATOR: '[Zzz] ',
 }
 
 const SYSTEM_URL_PROTOCOLS = ['chrome:', 'edge:', 'about:']
@@ -178,6 +179,22 @@ async function updateBadge() {
   chrome.action.setBadgeBackgroundColor({ color: CONFIG.BADGE_COLOR })
 }
 
+async function addVisualIndicator(tabId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (indicator) => {
+        if (!document.title.startsWith(indicator)) {
+          document.title = indicator + document.title
+        }
+      },
+      args: [CONFIG.VISUAL_INDICATOR]
+    })
+  } catch (e) {
+    // Ignore errors for system pages or restricted pages
+  }
+}
+
 async function sendSuspensionNotification(tabTitle, tabUrl) {
   try {
     await chrome.runtime.sendMessage({
@@ -189,10 +206,14 @@ async function sendSuspensionNotification(tabTitle, tabUrl) {
   }
 }
 
-async function suspendTab(tabId) {
+async function suspendTab(tabId, force = false) {
   try {
     const tab = await chrome.tabs.get(tabId)
-    if (!tab || tab.discarded || tab.active) return false
+    if (!tab || tab.discarded) return false
+    if (!force && tab.active) return false
+
+    // Add visual indicator before discarding
+    await addVisualIndicator(tabId)
 
     await storage.addSuspendedTab(tabId, tab.url, tab.title)
     await chrome.tabs.discard(tabId)
@@ -295,22 +316,21 @@ async function suspendAllInactive() {
   return count
 }
 
-async function restoreAllTabs() {
-  const suspended = await storage.getSuspendedTabs()
-  let count = 0
+async function suspendAllExceptCurrent() {
+  const tabs = await chrome.tabs.query({ currentWindow: true })
+  const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true })
+  const activeTabIds = new Set(activeTabs.map(t => t.id))
 
-  for (const id in suspended) {
-    try {
-      await chrome.tabs.reload(parseInt(id, 10))
-      count++
-    } catch {
+  let count = 0
+  for (const tab of tabs) {
+    if (activeTabIds.has(tab.id)) continue
+    if (!isSystemUrl(tab.url)) {
+      if (await suspendTab(tab.id, true)) count++
     }
   }
-
-  await storage.clearSuspendedTabs()
-  await updateBadge()
   return count
 }
+
 
 async function getStats() {
   const current = await storage.getSuspendedTabCount()
@@ -376,9 +396,19 @@ function setupEventListeners() {
   })
 
   chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-    if (info.menuItemId === 'suspend-tab' && tab) await suspendTab(tab.id)
+    if (info.menuItemId === 'suspend-tab' && tab) {
+      const tabs = await chrome.tabs.query({ currentWindow: true })
+      const otherTabs = tabs
+        .filter(t => t.id !== tab.id && !t.discarded && !isSystemUrl(t.url))
+        .sort((a, b) => (lastActiveTimes[b.id] || 0) - (lastActiveTimes[a.id] || 0))
+
+      if (otherTabs[0]) {
+        await chrome.tabs.update(otherTabs[0].id, { active: true })
+      }
+      await suspendTab(tab.id, true)
+    }
     else if (info.menuItemId === 'suspend-all') await suspendAllInactive()
-    else if (info.menuItemId === 'restore-all') await restoreAllTabs()
+    else if (info.menuItemId === 'suspend-all-except-current') await suspendAllExceptCurrent()
   })
 
   chrome.alarms.onAlarm.addListener(alarm => {
@@ -390,15 +420,26 @@ function setupEventListeners() {
       GET_STATS: async () => sendResponse(await getStats()),
       SUSPEND_CURRENT: async () => {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-        if (tabs[0]) sendResponse({ success: await suspendTab(tabs[0].id) })
+        if (tabs[0]) {
+          const currentTab = tabs[0]
+          const allTabs = await chrome.tabs.query({ currentWindow: true })
+          const otherTabs = allTabs
+            .filter(t => t.id !== currentTab.id && !t.discarded && !isSystemUrl(t.url))
+            .sort((a, b) => (lastActiveTimes[b.id] || 0) - (lastActiveTimes[a.id] || 0))
+
+          if (otherTabs[0]) {
+            await chrome.tabs.update(otherTabs[0].id, { active: true })
+          }
+          sendResponse({ success: await suspendTab(currentTab.id, true) })
+        }
         else sendResponse({ success: false })
       },
       SUSPEND_ALL: async () => {
         const count = await suspendAllInactive()
         sendResponse({ count })
       },
-      RESTORE_ALL: async () => {
-        const count = await restoreAllTabs()
+      SUSPEND_ALL_EXCEPT_CURRENT: async () => {
+        const count = await suspendAllExceptCurrent()
         sendResponse({ count })
       },
       GET_SUSPENDED_LIST: async () => {
@@ -424,7 +465,7 @@ function setupEventListeners() {
 
     chrome.contextMenus.create({ id: 'suspend-tab', title: 'Suspend Current Tab', contexts: ['page'] })
     chrome.contextMenus.create({ id: 'suspend-all', title: 'Suspend Inactive Tabs', contexts: ['page'] })
-    chrome.contextMenus.create({ id: 'restore-all', title: 'Restore All Tabs', contexts: ['page'] })
+    chrome.contextMenus.create({ id: 'suspend-all-except-current', title: 'Suspend All Except Current', contexts: ['page'] })
 
     chrome.alarms.create(CONFIG.ALARM_NAME, { periodInMinutes: CONFIG.ALARM_INTERVAL_MINUTES })
     await updateBadge()
@@ -434,6 +475,7 @@ function setupEventListeners() {
 
 self.lastActiveTimes = lastActiveTimes
 self.runCheck = runCheck
+self.suspendTab = suspendTab
 
 setupEventListeners()
 
