@@ -264,7 +264,7 @@ async function runCheck() {
 }
 
 function getTabSortingKey(tabId) {
-  return lastActiveTimes[tabId] || 0
+  return lastActiveTimes[tabId] || Date.now()
 }
 
 function sortTabsByLastActive(tabs) {
@@ -295,9 +295,10 @@ async function enforceTabLimit() {
   const sortedCandidates = sortTabsByLastActive(candidates)
 
   const surplus = tabs.length - limit
-  const tabsToSuspend = sortedCandidates.slice(0, surplus)
+  const tabsToSuspend = sortedCandidates.slice(0, Math.min(surplus, sortedCandidates.length))
 
   for (const tab of tabsToSuspend) {
+    console.log(`[TabRest] Enforcing limit: Suspending surplus tab ${tab.id} (${tab.title})`)
     await suspendTab(tab.id)
   }
 }
@@ -372,10 +373,14 @@ function setupEventListeners() {
     touchTab(tabId)
     storage.removeSuspendedTab(tabId)
     updateBadge()
+    enforceTabLimit() // Enforce limit if a tab was waken up
   })
 
   chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    if (changeInfo.status === 'complete' || changeInfo.audible !== undefined) {
+    if (changeInfo.status === 'complete') {
+      touchTab(tabId)
+      enforceTabLimit()
+    } else if (changeInfo.audible !== undefined) {
       touchTab(tabId)
     }
   })
@@ -387,12 +392,9 @@ function setupEventListeners() {
     updateBadge()
   })
 
-  chrome.tabs.onCreated.addListener(() => enforceTabLimit())
-
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    if (changeInfo.status === 'complete') {
-      enforceTabLimit()
-    }
+  chrome.tabs.onCreated.addListener((tab) => {
+    touchTab(tab.id)
+    enforceTabLimit()
   })
 
   chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -470,6 +472,13 @@ function setupEventListeners() {
     chrome.alarms.create(CONFIG.ALARM_NAME, { periodInMinutes: CONFIG.ALARM_INTERVAL_MINUTES })
     await updateBadge()
     await enforceTabLimit()
+  })
+
+  // Listen for setting changes to enforce limits immediately
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.settings) {
+      enforceTabLimit()
+    }
   })
 }
 
