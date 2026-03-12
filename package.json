@@ -2,7 +2,7 @@
   "private": true,
   "name": "tabrest",
   "description": "Automatically suspend inactive tabs to save memory and keep your browser fast.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "MIT",
   "type": "module",
   "author": "Fábio Alves @FabyoSK",
