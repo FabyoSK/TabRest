@@ -138,7 +138,7 @@ async function suspendAllExceptCurrent() {
 function getFaviconUrl(url) {
   try {
     const parsedUrl = new URL(url)
-    return `https://www.google.com/s2/favicons?domain=${parsedUrl.hostname}&sz=32`
+    return `https://icons.duckduckgo.com/ip3/${parsedUrl.hostname}.ico`
   } catch {
     return ''
   }
@@ -202,8 +202,8 @@ function renderTabLimit() {
     </div>
     <div class="progress-desc">
       ${remaining > 0
-        ? `${remaining} more till auto-suspension`
-        : 'Limit reached! Oldest tabs will rest next.'}
+      ? `${remaining} more till auto-suspension`
+      : 'Limit reached! Oldest tabs will rest next.'}
     </div>
   `
 }
