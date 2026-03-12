@@ -348,10 +348,10 @@ function renderCustomTimeout() {
   `
 }
 
-function renderToggle(key, label, description) {
+function renderToggle(id, settingKey) {
   return `
     <label class="toggle">
-      <input type="checkbox" id="toggle-${key}" ${state.settings[key] ? 'checked' : ''} />
+      <input type="checkbox" id="toggle-${id}" ${state.settings[settingKey] ? 'checked' : ''} />
       <span class="toggle-track"></span>
     </label>
   `
@@ -378,21 +378,21 @@ function renderGeneralSettings() {
             <span class="setting-label">Suspend Pinned Tabs</span>
             <span class="setting-desc">Apply auto-suspension logic to pinned tabs</span>
           </div>
-          ${renderToggle('suspendPinned')}
+          ${renderToggle('pinned', 'suspendPinned')}
         </div>
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-label">Restore Scroll Position</span>
             <span class="setting-desc">Return to previous position when waking a tab</span>
           </div>
-          ${renderToggle('restoreScroll')}
+          ${renderToggle('scroll', 'restoreScroll')}
         </div>
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-label">Detailed Impact Metrics</span>
             <span class="setting-desc">Track daily/weekly/monthly suspension history</span>
           </div>
-          ${renderToggle('trackDetailedMetrics')}
+          ${renderToggle('metrics', 'trackDetailedMetrics')}
         </div>
       </div>
     </div>
@@ -428,7 +428,7 @@ function renderPerformanceSettings() {
             <span class="setting-label">Background Only</span>
             <span class="setting-desc">Never suspend the currently active tab</span>
           </div>
-          ${renderToggle('backgroundOnly')}
+          ${renderToggle('background', 'backgroundOnly')}
         </div>
         <div class="setting-row">
           <div class="setting-info">
@@ -437,7 +437,7 @@ function renderPerformanceSettings() {
           </div>
           <div class="setting-actions">
             <button class="btn-ghost" id="btn-preview-toast">Preview</button>
-            ${renderToggle('showToasts')}
+            ${renderToggle('toasts', 'showToasts')}
           </div>
         </div>
       </div>
