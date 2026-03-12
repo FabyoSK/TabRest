@@ -2,69 +2,169 @@
  * TabRest - Background Service Worker
  */
 
-const ALARM_NAME = 'tabrest-check'
-const ALARM_INTERVAL = 1
-const DEFAULT_SETTINGS = {
-  idleTimeout: 15,
-  suspendPinned: false,
-  restoreScroll: true,
-  maxSuspended: 100,
-  backgroundOnly: true,
-  showToasts: true,
-  maxOpenTabs: 20,
-  trackDetailedMetrics: false,
+const CONFIG = {
+  ALARM_NAME: 'tabrest-check',
+  ALARM_INTERVAL_MINUTES: 1,
+  DEFAULT_SETTINGS: {
+    idleTimeout: 15,
+    suspendPinned: false,
+    restoreScroll: true,
+    maxSuspended: 100,
+    backgroundOnly: true,
+    showToasts: true,
+    maxOpenTabs: 20,
+    trackDetailedMetrics: false,
+  },
+  METRICS: {
+    MEMORY_SAVED_PER_TAB_MB: 80,
+    THIRTY_DAYS_MS: 30 * 24 * 60 * 60 * 1000,
+    ONE_DAY_MS: 24 * 60 * 60 * 1000,
+    SEVEN_DAYS_MS: 7 * 24 * 60 * 60 * 1000,
+  },
+  HISTORY_LIMIT: 10,
+  BADGE_COLOR: '#cba6f7',
 }
 
+const SYSTEM_URL_PROTOCOLS = ['chrome:', 'edge:', 'about:']
 
+class StorageRepository {
+  async getSettings() {
+    const result = await chrome.storage.local.get('settings')
+    return { ...CONFIG.DEFAULT_SETTINGS, ...(result.settings || {}) }
+  }
 
+  async saveSettings(settings) {
+    await chrome.storage.local.set({ settings })
+  }
 
+  async getWhitelist() {
+    const result = await chrome.storage.local.get('whitelist')
+    return result.whitelist || []
+  }
 
-let lastActiveTimes = {}
-self.lastActiveTimes = lastActiveTimes;
-self.runCheck = runCheck;
+  async getSuspendedTabs() {
+    const result = await chrome.storage.local.get('suspendedTabs')
+    return result.suspendedTabs || {}
+  }
 
-async function getSettings() {
-  const result = await chrome.storage.local.get('settings')
-  return { ...DEFAULT_SETTINGS, ...(result.settings || {}) }
+  async getSuspendedTabCount() {
+    const suspended = await this.getSuspendedTabs()
+    return Object.keys(suspended).length
+  }
+
+  async addSuspendedTab(tabId, url, title) {
+    const suspended = await this.getSuspendedTabs()
+    suspended[tabId] = { url, title, suspendedAt: Date.now() }
+    await chrome.storage.local.set({ suspendedTabs: suspended })
+  }
+
+  async removeSuspendedTab(tabId) {
+    const suspended = await this.getSuspendedTabs()
+    delete suspended[tabId]
+    await chrome.storage.local.set({ suspendedTabs: suspended })
+  }
+
+  async getMetrics() {
+    const result = await chrome.storage.local.get([
+      'totalSuspended',
+      'suspensionHistory',
+      'detailedMetrics',
+      'settings'
+    ])
+    return {
+      totalSuspended: result.totalSuspended || 0,
+      suspensionHistory: result.suspensionHistory || [],
+      detailedMetrics: result.detailedMetrics || [],
+      settings: { ...CONFIG.DEFAULT_SETTINGS, ...(result.settings || {}) }
+    }
+  }
+
+  async incrementTotalSuspended() {
+    const current = await this.getMetrics()
+    await chrome.storage.local.set({ totalSuspended: current.totalSuspended + 1 })
+  }
+
+  async addSuspensionHistory(tabTitle, tabUrl) {
+    const current = await this.getMetrics()
+    const history = current.suspensionHistory
+    history.unshift({ title: tabTitle || tabUrl, at: Date.now() })
+    if (history.length > CONFIG.HISTORY_LIMIT) history.pop()
+    await chrome.storage.local.set({ suspensionHistory: history })
+  }
+
+  async addDetailedMetric() {
+    const current = await this.getMetrics()
+    const detailed = current.detailedMetrics
+    const now = Date.now()
+    const thirtyDaysAgo = now - CONFIG.METRICS.THIRTY_DAYS_MS
+
+    detailed.push(now)
+    const pruned = detailed.filter(ts => ts > thirtyDaysAgo)
+    await chrome.storage.local.set({ detailedMetrics: pruned })
+  }
+
+  async incrementSessionSuspended() {
+    const result = await chrome.storage.session.get('sessionSuspended')
+    const count = (result.sessionSuspended || 0) + 1
+    await chrome.storage.session.set({ sessionSuspended: count })
+  }
+
+  async clearSuspendedTabs() {
+    await chrome.storage.local.set({ suspendedTabs: {} })
+  }
+
+  async initializeDefaults() {
+    const result = await chrome.storage.local.get([
+      'settings', 'whitelist', 'suspendedTabs',
+      'totalSuspended', 'suspensionHistory', 'detailedMetrics'
+    ])
+
+    if (!result.settings) await this.saveSettings(CONFIG.DEFAULT_SETTINGS)
+    if (!result.whitelist) await chrome.storage.local.set({ whitelist: [] })
+    if (!result.suspendedTabs) await chrome.storage.local.set({ suspendedTabs: {} })
+    if (!result.totalSuspended) await chrome.storage.local.set({ totalSuspended: 0 })
+    if (!result.suspensionHistory) await chrome.storage.local.set({ suspensionHistory: [] })
+    if (!result.detailedMetrics) await chrome.storage.local.set({ detailedMetrics: [] })
+
+    await chrome.storage.session.set({ sessionSuspended: 0 })
+  }
 }
 
-async function getWhitelist() {
-  const result = await chrome.storage.local.get('whitelist')
-  return result.whitelist || []
-}
+const storage = new StorageRepository()
 
-async function getSuspendedCount() {
-  const result = await chrome.storage.local.get('suspendedTabs')
-  const suspended = result.suspendedTabs || {}
-  return Object.keys(suspended).length
-}
+const lastActiveTimes = {}
 
-async function addSuspendedTab(tabId, url, title) {
-  const result = await chrome.storage.local.get('suspendedTabs')
-  const suspended = result.suspendedTabs || {}
-  suspended[tabId] = { url, title, suspendedAt: Date.now() }
-  await chrome.storage.local.set({ suspendedTabs: suspended })
-}
-
-async function removeSuspendedTab(tabId) {
-  const result = await chrome.storage.local.get('suspendedTabs')
-  const suspended = result.suspendedTabs || {}
-  delete suspended[tabId]
-  await chrome.storage.local.set({ suspendedTabs: suspended })
+function isSystemUrl(url) {
+  if (!url) return true
+  return SYSTEM_URL_PROTOCOLS.some(protocol => url.startsWith(protocol))
 }
 
 function isWhitelisted(url, whitelist) {
-  if (!url) return false
+  if (!url || isSystemUrl(url)) return false
   try {
-    const hostname = new URL(url).hostname
+    const hostname = new URL(url).hostname.toLowerCase()
     return whitelist.some(domain => {
-      const d = domain.trim().toLowerCase()
-      const h = hostname.toLowerCase()
-      return h === d || h.endsWith('.' + d)
+      const normalizedDomain = domain.trim().toLowerCase()
+      return hostname === normalizedDomain || hostname.endsWith('.' + normalizedDomain)
     })
   } catch {
     return false
   }
+}
+
+function isTabSuspensionCandidate(tab, settings, whitelist) {
+  if (isSystemUrl(tab.url)) return false
+  if (tab.discarded || tab.audible) return false
+  if (tab.active) return false
+  if (tab.pinned && !settings.suspendPinned) return false
+  if (isWhitelisted(tab.url, whitelist)) return false
+  return true
+}
+
+function getTabIdleMinutes(tabId) {
+  const lastActive = lastActiveTimes[tabId]
+  if (!lastActive) return 0
+  return (Date.now() - lastActive) / 1000 / 60
 }
 
 function touchTab(tabId) {
@@ -72,97 +172,61 @@ function touchTab(tabId) {
   chrome.storage.local.set({ lastActiveTimes })
 }
 
-chrome.tabs.onActivated.addListener(({ tabId }) => {
-  touchTab(tabId)
-  removeSuspendedTab(tabId)
-  updateBadge()
-})
+async function updateBadge() {
+  const count = await storage.getSuspendedTabCount()
+  chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' })
+  chrome.action.setBadgeBackgroundColor({ color: CONFIG.BADGE_COLOR })
+}
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (changeInfo.status === 'complete' || changeInfo.audible !== undefined) {
-    touchTab(tabId)
+async function sendSuspensionNotification(tabTitle, tabUrl) {
+  try {
+    await chrome.runtime.sendMessage({
+      type: 'TAB_SUSPENDED',
+      tabName: tabTitle || 'Unknown tab',
+      url: tabUrl
+    })
+  } catch {
   }
-})
-
-chrome.tabs.onRemoved.addListener((tabId) => {
-  delete lastActiveTimes[tabId]
-  removeSuspendedTab(tabId)
-  chrome.storage.local.set({ lastActiveTimes })
-  updateBadge()
-})
+}
 
 async function suspendTab(tabId) {
   try {
     const tab = await chrome.tabs.get(tabId)
     if (!tab || tab.discarded || tab.active) return false
 
-    // Update suspended tabs list
-    await addSuspendedTab(tabId, tab.url, tab.title)
-
-    // Actually discard the tab
+    await storage.addSuspendedTab(tabId, tab.url, tab.title)
     await chrome.tabs.discard(tabId)
 
-    // Update metrics
-    const res = await chrome.storage.local.get(['totalSuspended', 'suspensionHistory', 'settings', 'detailedMetrics'])
-    const total = (res.totalSuspended || 0) + 1
-    const settings = { ...DEFAULT_SETTINGS, ...(res.settings || {}) }
+    await storage.incrementTotalSuspended()
+    await storage.addSuspensionHistory(tab.title, tab.url)
 
-    const history = res.suspensionHistory || []
-    history.unshift({ title: tab.title || tab.url, at: Date.now() })
-    if (history.length > 5) history.pop()
-
-    const storageUpdate = {
-      totalSuspended: total,
-      suspensionHistory: history
+    const metrics = await storage.getMetrics()
+    if (metrics.settings.trackDetailedMetrics) {
+      await storage.addDetailedMetric()
+      await storage.incrementSessionSuspended()
     }
 
-    if (settings.trackDetailedMetrics) {
-      const detailed = res.detailedMetrics || []
-      const now = Date.now()
-      const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000)
+    await updateBadge()
 
-      detailed.push(now)
-      const pruned = detailed.filter(ts => ts > thirtyDaysAgo)
-      storageUpdate.detailedMetrics = pruned
-
-      // Update session count
-      chrome.storage.session.get('sessionSuspended', (sessionRes) => {
-        const sessionCount = (sessionRes.sessionSuspended || 0) + 1
-        chrome.storage.session.set({ sessionSuspended: sessionCount })
-      })
-    }
-
-    await chrome.storage.local.set(storageUpdate)
-    updateBadge()
-
-    if (settings.showToasts) {
-      chrome.runtime.sendMessage({
-        type: 'TAB_SUSPENDED',
-        tabName: tab.title || 'Unknown tab',
-        url: tab.url
-      }).catch(() => { })
+    if (metrics.settings.showToasts) {
+      await sendSuspensionNotification(tab.title, tab.url)
     }
 
     console.log(`[TabRest] Suspending tab: ${tab.title} (${tab.id})`)
     return true
-  } catch (err) {
-    console.error(`[TabRest] Error suspending tab ${tabId}:`, err)
+  } catch (error) {
+    console.error(`[TabRest] Error suspending tab ${tabId}:`, error)
     return false
   }
 }
 
-
-
 async function runCheck() {
-  const settings = await getSettings()
-  const whitelist = await getWhitelist()
+  const settings = await storage.getSettings()
+  const whitelist = await storage.getWhitelist()
   const tabs = await chrome.tabs.query({})
 
   for (const tab of tabs) {
-    if (!tab.url || tab.url.startsWith('chrome') || tab.url.startsWith('edge') || tab.url.startsWith('about')) continue
-    if (tab.active || tab.discarded || tab.audible) continue
-    if (tab.pinned && !settings.suspendPinned) continue
-    if (isWhitelisted(tab.url, whitelist)) continue
+    if (!isTabSuspensionCandidate(tab, settings, whitelist)) continue
 
     const lastActive = lastActiveTimes[tab.id]
     if (!lastActive) {
@@ -170,190 +234,212 @@ async function runCheck() {
       continue
     }
 
-    const elapsed = (Date.now() - lastActive) / 1000 / 60
-    if (elapsed >= settings.idleTimeout) {
-      console.log(`[TabRest] Auto-suspending ${tab.url} (inactive for ${elapsed.toFixed(1)}m)`)
+    const elapsedMinutes = getTabIdleMinutes(tab.id)
+    if (elapsedMinutes >= settings.idleTimeout) {
+      console.log(`[TabRest] Auto-suspending ${tab.url} (inactive for ${elapsedMinutes.toFixed(1)}m)`)
       await suspendTab(tab.id)
     }
   }
 }
 
-async function updateBadge() {
-  const count = await getSuspendedCount()
-  chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' })
-  chrome.action.setBadgeBackgroundColor({ color: '#cba6f7' })
+function getTabSortingKey(tabId) {
+  return lastActiveTimes[tabId] || 0
 }
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get(['settings', 'whitelist', 'suspendedTabs', 'totalSuspended', 'suspensionHistory', 'detailedMetrics'], (res) => {
-    if (!res.settings) chrome.storage.local.set({ settings: DEFAULT_SETTINGS })
-    if (!res.whitelist) chrome.storage.local.set({ whitelist: [] })
-    if (!res.suspendedTabs) chrome.storage.local.set({ suspendedTabs: {} })
-    if (!res.totalSuspended) chrome.storage.local.set({ totalSuspended: 0 })
-    if (!res.suspensionHistory) chrome.storage.local.set({ suspensionHistory: [] })
-    if (!res.detailedMetrics) chrome.storage.local.set({ detailedMetrics: [] })
-  })
+function sortTabsByLastActive(tabs) {
+  return [...tabs].sort((a, b) => getTabSortingKey(a.id) - getTabSortingKey(b.id))
+}
 
-  chrome.storage.session.set({ sessionSuspended: 0 })
-
-
-  // Professional menu titles (removed emojis)
-  chrome.contextMenus.create({ id: 'suspend-tab', title: 'Suspend Current Tab', contexts: ['page'] })
-  chrome.contextMenus.create({ id: 'suspend-all', title: 'Suspend Inactive Tabs', contexts: ['page'] })
-  chrome.contextMenus.create({ id: 'restore-all', title: 'Restore All Tabs', contexts: ['page'] })
-
-  chrome.alarms.create(ALARM_NAME, { periodInMinutes: ALARM_INTERVAL })
-  updateBadge()
-  enforceTabLimit()
-})
-
-chrome.tabs.onCreated.addListener(() => {
-  enforceTabLimit()
-})
-
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (changeInfo.status === 'complete') {
-    enforceTabLimit()
-  }
-})
+function filterSuspensionCandidates(tabs, settings, whitelist, activeTabIds) {
+  return tabs
+    .filter(tab => !activeTabIds.has(tab.id))
+    .filter(tab => !isSystemUrl(tab.url))
+    .filter(tab => !tab.pinned || settings.suspendPinned)
+    .filter(tab => !isWhitelisted(tab.url, whitelist))
+}
 
 async function enforceTabLimit() {
-  const settings = await getSettings()
+  const settings = await storage.getSettings()
   const limit = settings.maxOpenTabs
   if (!limit || limit <= 0) return
 
   const tabs = await chrome.tabs.query({ discarded: false })
   if (tabs.length <= limit) return
 
-  const whitelist = await getWhitelist()
+  const whitelist = await storage.getWhitelist()
+  const activeTabs = await chrome.tabs.query({ active: true })
+  const activeTabIds = new Set(activeTabs.map(t => t.id))
 
-  // Sort tabs by last active time (oldest first)
-  const allActiveTabs = await chrome.tabs.query({ active: true })
-  const activeTabIds = new Set(allActiveTabs.map(t => t.id))
-
-  const candidates = tabs
-    .filter(t => !activeTabIds.has(t.id))
-    .filter(t => !t.url || (!t.url.startsWith('chrome') && !t.url.startsWith('edge') && !t.url.startsWith('about')))
-    .filter(t => !t.pinned || settings.suspendPinned)
-    .filter(t => !isWhitelisted(t.url, whitelist))
-    .sort((a, b) => {
-      const timeA = lastActiveTimes[a.id] || 0
-      const timeB = lastActiveTimes[b.id] || 0
-      return timeA - timeB
-    })
+  const candidates = filterSuspensionCandidates(tabs, settings, whitelist, activeTabIds)
+  const sortedCandidates = sortTabsByLastActive(candidates)
 
   const surplus = tabs.length - limit
-  for (let i = 0; i < Math.min(surplus, candidates.length); i++) {
-    await suspendTab(candidates[i].id)
+  const tabsToSuspend = sortedCandidates.slice(0, surplus)
+
+  for (const tab of tabsToSuspend) {
+    await suspendTab(tab.id)
   }
 }
 
-
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId === 'suspend-tab' && tab) await suspendTab(tab.id)
-  else if (info.menuItemId === 'suspend-all') await suspendAll()
-  else if (info.menuItemId === 'restore-all') await restoreAll()
-})
-
-chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === ALARM_NAME) runCheck()
-})
-
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.type === 'GET_STATS') {
-    Promise.all([
-      getSuspendedCount(),
-      chrome.storage.local.get(['totalSuspended', 'detailedMetrics', 'settings']),
-      chrome.storage.session.get('sessionSuspended'),
-      chrome.tabs.query({ discarded: false })
-    ]).then(([current, localRes, sessionRes, openTabs]) => {
-      const total = localRes.totalSuspended || 0
-      const settings = { ...DEFAULT_SETTINGS, ...(localRes.settings || {}) }
-      const detailed = localRes.detailedMetrics || []
-      const sessionCount = sessionRes.sessionSuspended || 0
-
-      const now = Date.now()
-      const oneDay = 24 * 60 * 60 * 1000
-      const today = detailed.filter(ts => ts > (now - oneDay)).length
-      const week = detailed.filter(ts => ts > (now - 7 * oneDay)).length
-      const month = detailed.filter(ts => ts > (now - 30 * oneDay)).length
-
-      sendResponse({
-        current,
-        total,
-        session: sessionCount,
-        today,
-        week,
-        month,
-        memorySaved: total * 80,
-        currentMemorySaved: current * 80,
-        openTabsCount: openTabs.length,
-        maxOpenTabs: settings.maxOpenTabs,
-        trackDetailedMetrics: settings.trackDetailedMetrics
-      })
-    })
-    return true
-  }
-
-  if (msg.type === 'SUSPEND_CURRENT') {
-    chrome.tabs.query({ active: true, currentWindow: true }, async tabs => {
-      if (tabs[0]) sendResponse({ success: await suspendTab(tabs[0].id) })
-      else sendResponse({ success: false })
-    })
-    return true
-  }
-  if (msg.type === 'SUSPEND_ALL') {
-    suspendAll().then(count => sendResponse({ count }))
-    return true
-  }
-  if (msg.type === 'RESTORE_ALL') {
-    restoreAll().then(count => sendResponse({ count }))
-    return true
-  }
-  if (msg.type === 'GET_SUSPENDED_LIST') {
-    chrome.storage.local.get('suspendedTabs', res => sendResponse({ tabs: res.suspendedTabs || {} }))
-    return true
-  }
-  if (msg.type === 'TEST_RUN_CHECK') {
-    runCheck().then(() => sendResponse({ success: true }))
-    return true
-  }
-  if (msg.type === 'TEST_GET_ACTIVE_TIMES') {
-    sendResponse({ lastActiveTimes });
-    return true;
-  }
-})
-
-async function suspendAll() {
-  const settings = await getSettings()
-  const whitelist = await getWhitelist()
+async function suspendAllInactive() {
+  const settings = await storage.getSettings()
+  const whitelist = await storage.getWhitelist()
   const tabs = await chrome.tabs.query({ currentWindow: true })
+
   let count = 0
   for (const tab of tabs) {
-    if (tab.active || tab.discarded || tab.audible) continue
-    if (!tab.url || tab.url.startsWith('chrome')) continue
-    if (isWhitelisted(tab.url, whitelist)) continue
-    if (await suspendTab(tab.id)) count++
+    if (isTabSuspensionCandidate(tab, settings, whitelist)) {
+      if (await suspendTab(tab.id)) count++
+    }
   }
   return count
 }
 
-async function restoreAll() {
-  const res = await chrome.storage.local.get('suspendedTabs')
-  const suspended = res.suspendedTabs || {}
+async function restoreAllTabs() {
+  const suspended = await storage.getSuspendedTabs()
   let count = 0
+
   for (const id in suspended) {
     try {
       await chrome.tabs.reload(parseInt(id, 10))
       count++
-    } catch { }
+    } catch {
+    }
   }
-  await chrome.storage.local.set({ suspendedTabs: {} })
-  updateBadge()
+
+  await storage.clearSuspendedTabs()
+  await updateBadge()
   return count
 }
 
+async function getStats() {
+  const current = await storage.getSuspendedTabCount()
+  const metrics = await storage.getMetrics()
+  const sessionResult = await chrome.storage.session.get('sessionSuspended')
+  const openTabs = await chrome.tabs.query({ discarded: false })
+
+  const total = metrics.totalSuspended
+  const settings = metrics.settings
+  const detailed = metrics.detailedMetrics
+  const sessionCount = sessionResult.sessionSuspended || 0
+
+  const now = Date.now()
+  const oneDay = CONFIG.METRICS.ONE_DAY_MS
+  const sevenDays = CONFIG.METRICS.SEVEN_DAYS_MS
+  const thirtyDays = CONFIG.METRICS.THIRTY_DAYS_MS
+
+  const today = detailed.filter(ts => ts > (now - oneDay)).length
+  const week = detailed.filter(ts => ts > (now - sevenDays)).length
+  const month = detailed.filter(ts => ts > (now - thirtyDays)).length
+
+  return {
+    current,
+    total,
+    session: sessionCount,
+    today,
+    week,
+    month,
+    memorySaved: total * CONFIG.METRICS.MEMORY_SAVED_PER_TAB_MB,
+    currentMemorySaved: current * CONFIG.METRICS.MEMORY_SAVED_PER_TAB_MB,
+    openTabsCount: openTabs.length,
+    maxOpenTabs: settings.maxOpenTabs,
+    trackDetailedMetrics: settings.trackDetailedMetrics
+  }
+}
+
+function setupEventListeners() {
+  chrome.tabs.onActivated.addListener(({ tabId }) => {
+    touchTab(tabId)
+    storage.removeSuspendedTab(tabId)
+    updateBadge()
+  })
+
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (changeInfo.status === 'complete' || changeInfo.audible !== undefined) {
+      touchTab(tabId)
+    }
+  })
+
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    delete lastActiveTimes[tabId]
+    storage.removeSuspendedTab(tabId)
+    chrome.storage.local.set({ lastActiveTimes })
+    updateBadge()
+  })
+
+  chrome.tabs.onCreated.addListener(() => enforceTabLimit())
+
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (changeInfo.status === 'complete') {
+      enforceTabLimit()
+    }
+  })
+
+  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (info.menuItemId === 'suspend-tab' && tab) await suspendTab(tab.id)
+    else if (info.menuItemId === 'suspend-all') await suspendAllInactive()
+    else if (info.menuItemId === 'restore-all') await restoreAllTabs()
+  })
+
+  chrome.alarms.onAlarm.addListener(alarm => {
+    if (alarm.name === CONFIG.ALARM_NAME) runCheck()
+  })
+
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    const handlers = {
+      GET_STATS: async () => sendResponse(await getStats()),
+      SUSPEND_CURRENT: async () => {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+        if (tabs[0]) sendResponse({ success: await suspendTab(tabs[0].id) })
+        else sendResponse({ success: false })
+      },
+      SUSPEND_ALL: async () => {
+        const count = await suspendAllInactive()
+        sendResponse({ count })
+      },
+      RESTORE_ALL: async () => {
+        const count = await restoreAllTabs()
+        sendResponse({ count })
+      },
+      GET_SUSPENDED_LIST: async () => {
+        const tabs = await storage.getSuspendedTabs()
+        sendResponse({ tabs })
+      },
+      TEST_RUN_CHECK: async () => {
+        await runCheck()
+        sendResponse({ success: true })
+      },
+      TEST_GET_ACTIVE_TIMES: () => sendResponse({ lastActiveTimes })
+    }
+
+    const handler = handlers[message.type]
+    if (handler) {
+      handler()
+      return true
+    }
+  })
+
+  chrome.runtime.onInstalled.addListener(async () => {
+    await storage.initializeDefaults()
+
+    chrome.contextMenus.create({ id: 'suspend-tab', title: 'Suspend Current Tab', contexts: ['page'] })
+    chrome.contextMenus.create({ id: 'suspend-all', title: 'Suspend Inactive Tabs', contexts: ['page'] })
+    chrome.contextMenus.create({ id: 'restore-all', title: 'Restore All Tabs', contexts: ['page'] })
+
+    chrome.alarms.create(CONFIG.ALARM_NAME, { periodInMinutes: CONFIG.ALARM_INTERVAL_MINUTES })
+    await updateBadge()
+    await enforceTabLimit()
+  })
+}
+
+self.lastActiveTimes = lastActiveTimes
+self.runCheck = runCheck
+
+setupEventListeners()
+
 chrome.tabs.query({}, tabs => {
-  tabs.forEach(t => { if (!lastActiveTimes[t.id]) lastActiveTimes[t.id] = Date.now() })
+  tabs.forEach(tab => {
+    if (!lastActiveTimes[tab.id]) lastActiveTimes[tab.id] = Date.now()
+  })
 })
 updateBadge()
