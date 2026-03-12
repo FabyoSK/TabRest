@@ -8,39 +8,21 @@
     "16": "images/icon.png",
     "32": "images/icon.png",
     "48": "images/icon.png",
-    "64": "images/icon.png",
     "128": "images/icon.png"
   },
   "action": {
     "default_popup": "popup/index.html",
-    "default_icon": {
-      "16": "images/icon.png",
-      "32": "images/icon.png",
-      "48": "images/icon.png",
-      "64": "images/icon.png",
-      "128": "images/icon.png"
-    },
     "default_title": "TabRest — Tab Suspension"
   },
   "options_page": "options/index.html",
   "permissions": [
     "tabs",
     "storage",
-    "contextMenus",
     "alarms",
-    "activeTab",
-    "theme"
-  ],
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content/toast.js"],
-      "run_at": "document_end"
-    }
+    "contextMenus"
   ],
   "background": {
-
     "service_worker": "background.js"
   },
-  "author": "TabRest"
+  "author": "FabyoSK"
 }
