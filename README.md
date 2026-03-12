@@ -20,6 +20,23 @@
 | Brave Browser  | ✅        |
 | Opera          | ✅        |
 
+## Installation
+
+You can download the latest version of **TabRest** directly from the [GitHub Releases](https://github.com/FabyoSK/TabRest/releases) page.
+
+### How to Install
+
+1.  **Download**: Head to the [Releases](https://github.com/FabyoSK/TabRest/releases) page and download the latest `TabRest-v*-chrome.zip` file.
+2.  **Extract**: Extract the downloaded zip file to a folder of your choice on your computer.
+3.  **Open Extensions Page**: In your browser (Chrome, Edge, Brave, or Opera), go to the extensions management page:
+    - **Chrome**: `chrome://extensions`
+    - **Edge**: `edge://extensions`
+    - **Brave**: `brave://extensions`
+4.  **Enable Developer Mode**: Toggle the **Developer mode** switch in the top right corner (or side menu in some browsers).
+5.  **Load Unpacked**: Click the **Load unpacked** button.
+6.  **Select Folder**: Browse to and select the folder where you extracted the extension.
+7.  **Done!**: TabRest is now installed. You can pin it to your toolbar for easy access.
+
 ## Project Structure
 
 ```

@@ -19,7 +19,11 @@
     "tabs",
     "storage",
     "alarms",
-    "contextMenus"
+    "contextMenus",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*/*"
   ],
   "background": {
     "service_worker": "background.js"
